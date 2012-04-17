@@ -56,14 +56,10 @@
 
     var lastMappingResultDomDataKey = "setDomNodeChildrenFromArrayMapping_lastMappingResult";
 
-    ko.utils.setDomNodeChildrenFromArrayMapping = function (domNode, array, mapping, options, callbackAfterAddingNodes) {
-        // Compare the provided array against the previous one
-        array = array || [];
+    ko.utils.setDomNodeChildrenFromArrayMapping_applyEditScript = function (domNode, mapping, options, callbackAfterAddingNodes, editScript) {
         options = options || {};
         var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
-        var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
-        var editScript = ko.utils.compareArrays(lastArray, array);
 
         // Build the new mapping result
         var newMappingResult = [];
@@ -161,6 +157,37 @@
         // Store a copy of the array items we just considered so we can difference it next time
         ko.utils.domData.set(domNode, lastMappingResultDomDataKey, newMappingResult);
     }
+
+    ko.utils.setDomNodeChildrenFromArrayMapping = function (domNode, array, mapping, options, callbackAfterAddingNodes) {
+        // Compare the provided array against the previous one
+        array = array || [];
+        var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
+        var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
+        var editScript = ko.utils.compareArrays(lastArray, array);
+        ko.utils.setDomNodeChildrenFromArrayMapping_applyEditScript(domNode, mapping, options, callbackAfterAddingNodes, editScript);
+    }
+
+    ko.utils.updateDomNodeChildFromArray_valuesAdded = function(domNode, valueToNotify, mapping, options, callbackAfterAddingNodes) {
+        var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
+        var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
+        var editScript = ko.utils.arrayMap(lastArray, function (x) { return { status: "retained", value: x }});
+        var args=[valueToNotify.index, valueToNotify.valuesAdded.length];
+        ko.utils.forEach(valueToNotify.valuesAdded, function(value) {args.push({status: "added", value: value}); });
+        editScript.splice.apply(editScript, args);
+        ko.utils.setDomNodeChildrenFromArrayMapping_applyEditScript(domNode, mapping, options, callbackAfterAddingNodes, editScript);
+    }
+    ko.utils.updateDomNodeChildFromArray_valuesRemoved = function(domNode, valueToNotify, mapping, options, callbackAfterAddingNodes) {
+        var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
+        var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
+        var editScript = ko.utils.arrayMap(lastArray, function (x) { return { status: "retained", value: x }});
+        for (var i=valueToNotify.index; i<valueToNotify.index+valueToNotify.removedCount; i++) {
+            editScript[i]={ status: "deleted", value: lastArray[x] };
+        }
+        ko.utils.setDomNodeChildrenFromArrayMapping_applyEditScript(domNode, mapping, options, callbackAfterAddingNodes, editScript);
+    }
 })();
 
+ko.exportSymbol('utils.setDomNodeChildrenFromArrayMapping_applyEditScript', ko.utils.setDomNodeChildrenFromArrayMapping_applyEditScript);
 ko.exportSymbol('utils.setDomNodeChildrenFromArrayMapping', ko.utils.setDomNodeChildrenFromArrayMapping);
+ko.exportSymbol('utils.updateDomNodeChildFromArray_valuesAdded', ko.utils.updateDomNodeChildFromArray_valuesAdded);
+ko.exportSymbol('utils.updateDomNodeChildFromArray_valuesRemoved', ko.utils.updateDomNodeChildFromArray_valuesRemoved);

@@ -85,8 +85,13 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 var inOld;
                 if ((inOld = ko.utils.arrayIndexOf(disposalCandidates, subscribable)) >= 0)
                     disposalCandidates[inOld] = undefined; // Don't want to dispose this subscription, as it's still being used
-                else
+                else {
                     _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync)); // Brand new subscription - add it
+                    ko.utils.arrayForEach(['valuesAdded', 'valuesRemoved'], function(method) {
+                        if (method in options)
+                            subscribable.subscribe(options[method], method);
+                    });
+                }
             });
 
             var newValue = readFunction.call(evaluatorFunctionTarget);

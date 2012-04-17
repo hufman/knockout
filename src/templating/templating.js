@@ -138,6 +138,13 @@
                 options['afterRender'](addedNodesArray, arrayValue);
         };
 
+        var options = { 'disposeWhenNodeIsRemoved': targetNode };
+        ko.utils.arrayForEach(['valuesAdded', 'valuesRemoved'], function(method) {
+            options[method]=function(valueToNotify) {
+                ko.utils['updateDomNodeChildFromArray_'+method](targetNode, valueToNotify, executeTemplateForArrayItem, options, activateBindingsCallback);
+            }
+        });
+
         return ko.dependentObservable(function () {
             var unwrappedArray = ko.utils.unwrapObservable(arrayOrObservableArray) || [];
             if (typeof unwrappedArray.length == "undefined") // Coerce single value into array
@@ -150,7 +157,7 @@
 
             ko.utils.setDomNodeChildrenFromArrayMapping(targetNode, filteredArray, executeTemplateForArrayItem, options, activateBindingsCallback);
 
-        }, null, { 'disposeWhenNodeIsRemoved': targetNode });
+        }, null, options);
     };
 
     var templateSubscriptionDomDataKey = '__ko__templateSubscriptionDomDataKey__';

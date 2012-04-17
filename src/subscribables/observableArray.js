@@ -7,11 +7,14 @@ ko.observableArray = function (initialValues) {
         throw new Error("The argument passed when initializing an observable array must be an array, or null, or undefined.");
 
     var result = ko.observable(initialValues);
+    result.valuesAdded = function(index, values) { result["notifySubscribers"]({'index':index, 'values':values}, 'valuesAdded'); };
+    result.valuesRemoved = function(index, removedCount) { result["notifySubscribers"]({'index':index, 'removedCount':removedCount}, 'valuesRemoved'); };
     ko.utils.extend(result, ko.observableArray['fn']);
     return result;
 }
 
 ko.observableArray['fn'] = {
+
     'remove': function (valueOrPredicate) {
         var underlyingArray = this();
         var removedValues = [];
@@ -88,11 +91,35 @@ ko.observableArray['fn'] = {
             this()[index] = newItem;
             this.valueHasMutated();
         }
+    },
+
+    // read/write functions from native arrays, with easy modification
+    'splice': function(index, deleteCount) {
+        var added = [].slice.call(arguments,2);
+        var underlyingArray = this();
+        this.valuesRemoved(index, deleteCount);
+        var methodCallResult = underlyingArray.splice.apply(underlyingArray, arguments);
+        this.valuesAdded(index, added);
+        return methodCallResult;
+    },
+    'pop': function(index) {
+        return this.splice(index, 1)[0];
+    },
+    'push': function(index) {
+        var args = [].splice.call(arguments,1,0,0);
+        this.splice.apply(this, args);
+    },
+    'shift': function() {
+        return this.splice(0, 1);
+    },
+    'unshift': function() {
+        var args = [].splice.call(arguments,0,0,0,0);
+        this.splice.apply(this, args);
     }
 }
 
 // Populate ko.observableArray.fn with read/write functions from native arrays
-ko.utils.arrayForEach(["pop", "push", "reverse", "shift", "sort", "splice", "unshift"], function (methodName) {
+ko.utils.arrayForEach(["reverse", "sort"], function (methodName) {
     ko.observableArray['fn'][methodName] = function () {
         var underlyingArray = this();
         this.valueWillMutate();
